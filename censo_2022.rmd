@@ -1,0 +1,277 @@
+title: "Censo 2022"
+description: "Constitui a principal fonte de referência para o conhecimento das condições de vida da população em todos os municípios do País e em seus recortes territoriais internos,
+                    tendo como unidade de coleta a pessoa residente, na data de referência, em domicílio do Território Nacional"
+author script: 
+  - name: "Ítalo Marques-Monteiro"
+    github: https://github.com/italomarquesmonteiro
+    kaggle: https://www.kaggle.com/talomarquesmonteiro
+    linkedin: linkedin.com/in/ítalo-monteiro-0b2516144
+    lattes: http://lattes.cnpq.br/7174985368517137
+    orcid_id: https://orcid.org/0000-0003-4367-1034
+    affiliation: Anhanguera College  
+        - Department: Veterinary Medicine
+date: "2023-05-28"
+output: html_document
+---
+
+Limpar o console 
+```{r}
+rm(list = ls())
+```
+ 
+   O package [`{tidyverse}`](https://www.tidyverse.org) possui um ecossistema de packages:
+                           ->[{`ggplot2`}](https://ggplot2.tidyverse.org/).
+                            ->[{`tibble`}](https://tibble.tidyverse.org/).
+                             ->[{`tidyr`}](https://tidyr.tidyverse.org/).
+                              ->[{`dplyr`}](https://dplyr.tidyverse.org/).
+                               ->[{`readr`}](https://readr.tidyverse.org/).
+                                ->[{`purrr`}](https://purrr.tidyverse.org/).
+                                 ->[{`forcats`}](https://forcats.tidyverse.org/).
+   
+```{r}
+library(conflicted)
+library(tidyverse)
+```
+
+Tabelas de resultados preliminares [Censo 2022](https://sidra.ibge.gov.br/pesquisa/censo-demografico/demografico-2022/primeiros-resultados)
+* manipulação e junção das bases do senso 2022
+```{r}
+#temp <- readr::read_csv("C:/Users/italo/Downloads/tabela4709.csv", skip = 3) |> 
+#    dplyr::slice(1 : 5570) |>
+#    dplyr::rename(
+#        municipio = `Município`,
+#        code_muni = `Cód.`,
+#        populacao = `2022`) |>
+#    dplyr::mutate(code_muni = as.double(code_muni)) |>
+#    dplyr::glimpse() 
+#temp |>
+#    tibble::view()
+#
+#temp1 <- readxl::read_xlsx(
+#    "C:/Users/italo/Downloads/Tabela 2.1 - População residente, Área territorial e Densidade demográfica - Municípios - 2022.xlsx",
+#                skip = 3) |>
+#    janitor::clean_names("snake") |>
+#    dplyr::rename(
+#        municipio  = x1,
+#        populacao = populacao_residente_pessoas,
+#        area_muni_km2 = area_da_unidade_territorial_quilometros_quadrados,
+#        dens_demografica_hab_km2 = densidade_demografica_habitante_por_quilometro_quadrado
+#    ) |>
+#    dplyr::glimpse() 
+#temp1 |> tibble::view()
+#
+#
+#temp2 <- readxl::read_xlsx(
+#    "C:/Users/italo/Downloads/Tabela 2.2 - População residente e Taxa média geométrica de crescimento anual - Municípios - 2022.xlsx", 
+#            skip = 3) |>
+#    janitor::clean_names("snake") |>
+#    dplyr::select(-populacao_residente_pessoas) |>
+#    dplyr::rename(
+#        municipio = x1,
+#        tx_cresc_geometrico_percent = taxa_de_crescimento_geometrico_percent) |>
+#    dplyr::glimpse()
+#temp2 |> tibble::view()
+#
+## junção das bases
+#pop_temp <- temp |>
+#    dplyr::left_join(temp1) |>
+#    dplyr::glimpse()
+#
+#pop_temp1 <- pop_temp |>
+#    dplyr::left_join(temp2) |>
+#    dplyr::glimpse() |>
+#    readr::write_csv("C:/Users/italo/OneDrive/Área de Trabalho/VsCode/ibge/censo_2022.csv")
+```
+
+
+
+
+O package [{`geobr`}](https://github.com/ipeaGIT/geobr). 
+Tem fácil acesso a conjuntos de dados espaciais oficiais do Brasil como objetos 'sf' em R. 
+O pacote inclui uma ampla gama de dados geoespaciais disponíveis em várias escalas geográficas e por vários anos com atributos harmonizados, projeção e topologia fixa.
+Dados do [IBGE](https://concla.ibge.gov.br/classificacoes/por-tema/codigo-de-areas/codigo-de-areas)
+```{r}
+municipios_br <- geobr::read_municipality(code_muni = "all", year = 2020) |>
+    dplyr::glimpse()
+```
+
+
+Dados do  [IBGE](https://www.ibge.gov.br/)
+    [Censo 2022](https://sidra.ibge.gov.br/pesquisa/censo-demografico/demografico-2022/primeiros-resultados)
+```{r}
+censo_22 <- readr::read_csv(
+    "C:/Users/italo/OneDrive/Área de Trabalho/VsCode/ibge/censo_2022.csv") |>
+    dplyr::glimpse()
+censo_22 |>
+    tibble::view()
+```
+
+União das bases: censo_22; municipios_br
+```{r}
+censo_2022 <- municipios_br |>
+    dplyr::left_join(censo_22) |>
+    dplyr::glimpse()
+```
+
+
+  Grafico -  População 2022
+
+```{r}
+populacao_rs <- censo_2022 |>
+    dplyr::filter(abbrev_state == "RS") |>
+    ggplot2::ggplot() +
+        geom_sf(mapping = aes(fill = populacao)) +
+    viridis::scale_fill_viridis(discrete = FALSE) +
+    theme(legend.position = c(0.2, 0.2),
+    panel.grid.major = element_line(colour = "gray95"),
+    panel.background = element_rect(fill = "gray95"),
+    legend.background = element_rect(
+        fill = "grey95", colour = "gray95", size = 1)) +
+    labs(
+        fill = "Número de\nhabitantes",
+        x = "Longitude",
+        y = "Latitude") +
+    annotate("text", x = -54, y = -27, color = "gray30", size = 8,
+        label = "População Rio Grande do Sul") +
+    annotate("text", x = -50.8, y = -32.5, color = "gray40", size = 5,
+        label = "Censo (2022)") +
+    annotate("text", x = -51, y = -33,
+    label = "Source: IBGE [open data(2023)]
+    by Ítalo Monteiro" , color = "gray50") +
+    ggspatial::annotation_scale(
+      height = unit(0.2, "cm"),
+      pad_x = unit(15, "cm"),
+      pad_y = unit(0.5, "cm")) +
+    ggspatial::annotation_north_arrow(
+      width = unit(0.7, "cm"),
+      height = unit(0.9, "cm"),
+      pad_x = unit(17, "cm"),
+      pad_y = unit(1, "cm"))
+populacao_rs
+```
+```{r}
+ggsave("Images/populacao_rs.png",
+    plot = populacao_rs,
+    dpi = 600)
+```
+
+
+ Gráfico - Área municipal por kilometro quadrado
+```{r}
+area_muni_km2_rs <- censo_2022 |>
+    dplyr::filter(abbrev_state == "RS") |>
+    ggplot2::ggplot() +
+        geom_sf(mapping = aes(fill = area_muni_km2)) +
+    viridis::scale_fill_viridis(discrete = FALSE) +
+    theme(legend.position = c(0.2, 0.2),
+    panel.grid.major = element_line(colour = "gray95"),
+    panel.background = element_rect(fill = "gray95"),
+    legend.background = element_rect(
+        fill = "grey95", colour = "gray95", size = 1)) +
+    labs(
+        fill = "Kilometro\nquadrado",
+        x = "Longitude",
+        y = "Latitude") +
+    annotate("text", x = -54, y = -27, color = "gray30", size = 8,
+        label = "Área município - Rio Grande do Sul") +
+    annotate("text", x = -50.8, y = -32.5, color = "gray40", size = 5,
+        label = "Censo (2022)") +
+    annotate("text", x = -51, y = -33,
+    label = "Source: IBGE [open data(2023)]
+    by Ítalo Monteiro" , color = "gray50") +
+    ggspatial::annotation_scale(
+      height = unit(0.2, "cm"),
+      pad_x = unit(15, "cm"),
+      pad_y = unit(0.5, "cm")) +
+    ggspatial::annotation_north_arrow(
+      width = unit(0.7, "cm"),
+      height = unit(0.9, "cm"),
+      pad_x = unit(17, "cm"),
+      pad_y = unit(1, "cm"))
+area_muni_km2_rs
+```
+```{r}
+ggsave("Images/area_muni_km2_rs.png",
+    plot = area_muni_km2_rs,
+    dpi = 600)
+```
+
+ Gráfico - Densidade demográfica - Habitante por kilometro quadrado
+```{r}
+dens_demo_hab_km2_rs <- censo_2022 |>
+    dplyr::filter(abbrev_state == "RS") |>
+    ggplot2::ggplot() +
+        geom_sf(mapping = aes(fill = dens_demografica_hab_km2)) +
+    viridis::scale_fill_viridis(discrete = FALSE) +
+    theme(legend.position = c(0.2, 0.2),
+    panel.grid.major = element_line(colour = "gray95"),
+    panel.background = element_rect(fill = "gray95"),
+    legend.background = element_rect(
+        fill = "grey95", colour = "gray95", size = 1)) +
+    labs(
+        fill = "Habitante\nkm²",
+        x = "Longitude",
+        y = "Latitude") +
+    annotate("text", x = -54, y = -27, color = "gray30", size = 8,
+        label = "Densidade demográfica - Rio Grande do Sul") +
+    annotate("text", x = -50.8, y = -32.5, color = "gray40", size = 5,
+        label = "Censo (2022)") +
+    annotate("text", x = -51, y = -33,
+    label = "Source: IBGE [open data(2023)]
+    by Ítalo Monteiro" , color = "gray50") +
+    ggspatial::annotation_scale(
+      height = unit(0.2, "cm"),
+      pad_x = unit(15, "cm"),
+      pad_y = unit(0.5, "cm")) +
+    ggspatial::annotation_north_arrow(
+      width = unit(0.7, "cm"),
+      height = unit(0.9, "cm"),
+      pad_x = unit(17, "cm"),
+      pad_y = unit(1, "cm"))
+dens_demo_hab_km2_rs
+```
+```{r}
+ggsave("Images/dens_demo_hab_km2_rs.png",
+    plot = dens_demo_hab_km2_rs,
+    dpi = 600)
+```
+
+ Gráfico - Taxa de crescimento geométrico
+```{r}
+tx_cresc_geometrico_rs <- censo_2022 |>
+    dplyr::filter(abbrev_state == "RS") |>
+    ggplot2::ggplot() +
+        geom_sf(mapping = aes(fill = tx_cresc_geometrico_percent)) +
+    viridis::scale_fill_viridis(discrete = FALSE) +
+    theme(legend.position = c(0.2, 0.2),
+    panel.grid.major = element_line(colour = "gray95"),
+    panel.background = element_rect(fill = "gray95"),
+    legend.background = element_rect(
+        fill = "grey95", colour = "gray95", size = 1)) +
+    labs(
+        fill = "Percentual",
+        x = "Longitude",
+        y = "Latitude") +
+    annotate("text", x = -54, y = -27, color = "gray30", size = 8,
+        label = "Taxa de crescimento geométrico - Rio Grande do Sul") +
+    annotate("text", x = -50.8, y = -32.5, color = "gray40", size = 5,
+        label = "Censo (2022)") +
+    annotate("text", x = -51, y = -33,
+    label = "Source: IBGE [open data(2023)]
+    by Ítalo Monteiro" , color = "gray50") +
+    ggspatial::annotation_scale(
+      height = unit(0.2, "cm"),
+      pad_x = unit(15, "cm"),
+      pad_y = unit(0.5, "cm")) +
+    ggspatial::annotation_north_arrow(
+      width = unit(0.7, "cm"),
+      height = unit(0.9, "cm"),
+      pad_x = unit(17, "cm"),
+      pad_y = unit(1, "cm"))
+tx_cresc_geometrico_rs
+```
+```{r}
+ggsave("Images/tx_cresc_geometrico_rs.png",
+    plot = tx_cresc_geometrico_rs,
+    dpi = 600)
+```
